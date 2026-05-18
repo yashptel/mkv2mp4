@@ -1,0 +1,15 @@
+# Build output
+/mkv2mp4
+/dist/
+
+# Test artifacts
+*.test
+*.out
+coverage.*
+
+# Editor
+.idea/
+.vscode/
+*.swp
+*~
+.DS_Store

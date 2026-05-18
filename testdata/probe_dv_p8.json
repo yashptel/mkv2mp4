@@ -1,0 +1,37 @@
+{
+  "streams": [
+    {
+      "index": 0,
+      "codec_name": "hevc",
+      "codec_type": "video",
+      "width": 3840,
+      "height": 2160,
+      "side_data_list": [
+        {
+          "side_data_type": "DOVI configuration record",
+          "dv_version_major": 1,
+          "dv_version_minor": 0,
+          "dv_profile": 8,
+          "dv_level": 6,
+          "rpu_present_flag": 1,
+          "el_present_flag": 0,
+          "bl_present_flag": 1,
+          "dv_bl_signal_compatibility_id": 1
+        }
+      ]
+    },
+    {
+      "index": 1,
+      "codec_name": "eac3",
+      "codec_type": "audio",
+      "channels": 6,
+      "tags": {"language": "eng"}
+    }
+  ],
+  "format": {
+    "filename": "movie.mkv",
+    "format_name": "matroska,webm",
+    "duration": "5400.456",
+    "bit_rate": "35000000"
+  }
+}

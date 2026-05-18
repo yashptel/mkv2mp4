@@ -1,0 +1,50 @@
+{
+  "streams": [
+    {
+      "index": 0,
+      "codec_name": "hevc",
+      "codec_type": "video",
+      "width": 3840,
+      "height": 2160
+    },
+    {
+      "index": 1,
+      "codec_name": "dts",
+      "codec_type": "audio",
+      "channels": 8,
+      "tags": {"language": "eng", "title": "DTS-HD MA 7.1"},
+      "profile": "DTS-HD MA"
+    },
+    {
+      "index": 2,
+      "codec_name": "flac",
+      "codec_type": "audio",
+      "channels": 2,
+      "tags": {"language": "eng", "title": "FLAC 2.0"}
+    },
+    {
+      "index": 3,
+      "codec_name": "opus",
+      "codec_type": "audio",
+      "channels": 6,
+      "tags": {"language": "jpn"}
+    },
+    {
+      "index": 4,
+      "codec_name": "ass",
+      "codec_type": "subtitle",
+      "tags": {"language": "eng"}
+    },
+    {
+      "index": 5,
+      "codec_name": "dvd_subtitle",
+      "codec_type": "subtitle",
+      "tags": {"language": "eng"}
+    }
+  ],
+  "format": {
+    "filename": "complex.mkv",
+    "format_name": "matroska,webm",
+    "duration": "7200.0"
+  }
+}
