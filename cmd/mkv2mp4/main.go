@@ -19,15 +19,21 @@ import (
 	"strings"
 	"syscall"
 
+	"time"
+
 	"github.com/yashptel/mkv2mp4/internal/convert"
 	"github.com/yashptel/mkv2mp4/internal/deps"
 	"github.com/yashptel/mkv2mp4/internal/fsutil"
 	"github.com/yashptel/mkv2mp4/internal/plan"
 	"github.com/yashptel/mkv2mp4/internal/probe"
 	"github.com/yashptel/mkv2mp4/internal/progress"
+	"github.com/yashptel/mkv2mp4/internal/selfupdate"
 
 	"github.com/schollz/progressbar/v3"
 )
+
+// repoSlug points at the GitHub repo used for self-update lookups.
+const repoSlug = "yashptel/mkv2mp4"
 
 // version is overridden at link time by goreleaser via -ldflags.
 var version = "dev"
@@ -47,6 +53,8 @@ type cliOpts struct {
 	quiet        bool
 	yes          bool
 	updateDeps   bool
+	selfUpdate   bool
+	checkUpdate  bool
 	binDir       string
 	showVersion  bool
 }
@@ -71,12 +79,17 @@ func main() {
 	fs.BoolVar(&opts.quiet, "quiet", false, "Errors only (long form)")
 	fs.BoolVar(&opts.yes, "yes", false, "Auto-confirm interactive prompts")
 	fs.BoolVar(&opts.updateDeps, "update-deps", false, "Refetch ffmpeg/dovi_tool")
+	fs.BoolVar(&opts.selfUpdate, "update", false, "Update mkv2mp4 itself to the latest release")
+	fs.BoolVar(&opts.checkUpdate, "check-update", false, "Print whether a newer release exists")
 	fs.StringVar(&opts.binDir, "bin-dir", "", "Override binary cache location")
 	fs.BoolVar(&opts.showVersion, "version", false, "Print version and exit")
 
 	if err := fs.Parse(os.Args[1:]); err != nil {
 		os.Exit(2)
 	}
+
+	// Clean up any leftover .old binary from a prior Windows self-update.
+	selfupdate.CleanupOldBinary()
 
 	if opts.showVersion {
 		fmt.Println("mkv2mp4", version)
@@ -111,6 +124,8 @@ Flags:
   -v, --verbose            Show ffmpeg log
   -q, --quiet              Errors only
       --yes                Auto-confirm interactive prompts
+      --update             Update mkv2mp4 itself to the latest release
+      --check-update       Print whether a newer release exists
       --update-deps        Refetch ffmpeg/dovi_tool
       --bin-dir DIR        Override binary cache location
       --version            Print version
@@ -126,6 +141,13 @@ Examples:
 }
 
 func run(ctx context.Context, opts *cliOpts, args []string) error {
+	if opts.selfUpdate {
+		return runSelfUpdate(ctx, opts)
+	}
+	if opts.checkUpdate {
+		return runCheckUpdate(ctx, opts)
+	}
+
 	resolver, err := deps.NewResolver(opts.binDir)
 	if err != nil {
 		return err
@@ -345,6 +367,42 @@ func makeProgressBar(opts *cliOpts, p *plan.ConversionPlan, label string) *progr
 	}
 	totalUs := int64(p.Duration * 1_000_000)
 	return progress.NewBar(totalUs, fmt.Sprintf("  %s %s", label, filepath.Base(p.Input)))
+}
+
+func runSelfUpdate(ctx context.Context, opts *cliOpts) error {
+	res, err := selfupdate.Run(ctx, selfupdate.Options{
+		Repo:           repoSlug,
+		CurrentVersion: version,
+		Logger:         stderrFor(opts),
+	})
+	if err != nil {
+		return err
+	}
+	if !res.Updated {
+		fmt.Fprintf(os.Stderr, "Already up to date (%s).\n", res.CurrentVersion)
+		return nil
+	}
+	fmt.Fprintf(os.Stderr, "Updated %s -> %s (%s)\n", res.CurrentVersion, res.LatestVersion, res.BinaryPath)
+	return nil
+}
+
+func runCheckUpdate(ctx context.Context, opts *cliOpts) error {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	res, err := selfupdate.Check(ctx, selfupdate.Options{
+		Repo:           repoSlug,
+		CurrentVersion: version,
+	})
+	if err != nil {
+		return err
+	}
+	if res.HasUpdate {
+		fmt.Fprintf(os.Stderr, "A newer release is available: %s (current: %s)\n", res.LatestVersion, res.CurrentVersion)
+		fmt.Fprintln(os.Stderr, "  run `mkv2mp4 --update` to upgrade.")
+		return nil
+	}
+	fmt.Fprintf(os.Stderr, "Up to date (%s).\n", res.CurrentVersion)
+	return nil
 }
 
 func runUpdateDeps(ctx context.Context, resolver *deps.Resolver, opts *cliOpts) error {

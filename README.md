@@ -36,6 +36,17 @@ Or download `mkv2mp4_*_windows_amd64.zip` from the [Releases](https://github.com
 go install github.com/yashptel/mkv2mp4/cmd/mkv2mp4@latest
 ```
 
+### Updating
+
+```sh
+mkv2mp4 --check-update    # is there a newer release?
+mkv2mp4 --update          # download it and replace this binary
+```
+
+The self-updater fetches the latest release from GitHub, verifies the SHA256 against `checksums.txt`, and replaces the running binary in place — same UX on macOS, Linux, and Windows. On Windows it can't overwrite a running `.exe` directly, so it renames the current binary to `mkv2mp4.exe.old`; the next invocation cleans that up automatically.
+
+If you'd rather, you can also just re-run the install script — it overwrites the existing binary.
+
 ## Usage
 
 ```
@@ -63,6 +74,8 @@ mkv2mp4 --update-deps                   # refetch ffmpeg / dovi_tool
 | `-v`, `--verbose` | Show full ffmpeg log |
 | `-q`, `--quiet` | Errors only |
 | `--yes` | Auto-confirm interactive prompts (e.g. video transcode) |
+| `--update` | Self-update to the latest mkv2mp4 release |
+| `--check-update` | Check whether a newer mkv2mp4 release exists |
 | `--update-deps` | Force redownload of ffmpeg / ffprobe / dovi_tool |
 | `--bin-dir DIR` | Override binary cache location (default: `os.UserCacheDir()/mkv2mp4/bin`) |
 | `--version` | Print version |

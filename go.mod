@@ -5,6 +5,7 @@ go 1.24.0
 require (
 	github.com/schollz/progressbar/v3 v3.19.0
 	github.com/ulikunitz/xz v0.5.15
+	golang.org/x/mod v0.23.0
 )
 
 require (
