@@ -20,9 +20,15 @@ curl -fsSL https://raw.githubusercontent.com/yashptel/mkv2mp4/main/install.sh | 
 
 Installs to `/usr/local/bin/mkv2mp4`. Set `MKV2MP4_PREFIX=~/bin` to put it elsewhere, or `MKV2MP4_VERSION=vX.Y.Z` to pin a release.
 
-### Windows
+### Windows (PowerShell)
 
-Grab the latest `mkv2mp4_*_windows_amd64.zip` from the [Releases](https://github.com/yashptel/mkv2mp4/releases) page, extract `mkv2mp4.exe`, and add the folder to your `PATH`.
+```powershell
+iwr -useb https://raw.githubusercontent.com/yashptel/mkv2mp4/main/install.ps1 | iex
+```
+
+Installs to `%LOCALAPPDATA%\Programs\mkv2mp4\` and adds that directory to your user `PATH` (no admin required). Override with `$env:MKV2MP4_PREFIX = "$env:USERPROFILE\bin"` or pin a release with `$env:MKV2MP4_VERSION = 'vX.Y.Z'` before running.
+
+Or download `mkv2mp4_*_windows_amd64.zip` from the [Releases](https://github.com/yashptel/mkv2mp4/releases) page and extract `mkv2mp4.exe` somewhere on your `PATH`.
 
 ### From source
 

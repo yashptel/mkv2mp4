@@ -24,3 +24,18 @@ jobs:
       - run: go vet ./...
       - run: go test -race -count=1 ./...
       - run: go build -o bin/mkv2mp4 ./cmd/mkv2mp4
+
+      - name: Validate install.sh syntax
+        if: matrix.os != 'windows-latest'
+        run: sh -n install.sh
+
+      - name: Validate install.ps1 syntax
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          $errors = $null
+          $null = [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path './install.ps1'), [ref]$null, [ref]$errors)
+          if ($errors) {
+            $errors | ForEach-Object { Write-Host "::error file=install.ps1,line=$($_.Extent.StartLineNumber)::$($_.Message)" }
+            throw "install.ps1 has syntax errors"
+          }

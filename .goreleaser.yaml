@@ -37,6 +37,7 @@ archives:
       - LICENSE
       - README.md
       - install.sh
+      - install.ps1
 
 checksum:
   name_template: checksums.txt
