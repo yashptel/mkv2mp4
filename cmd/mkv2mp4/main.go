@@ -7,6 +7,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"errors"
 	"flag"
@@ -18,7 +19,6 @@ import (
 	"path/filepath"
 	"strings"
 	"syscall"
-
 	"time"
 
 	"github.com/yashptel/mkv2mp4/internal/convert"
@@ -300,14 +300,15 @@ func runDVPipeline(ctx context.Context, opts *cliOpts, p *plan.ConversionPlan, f
 	if opts.quiet {
 		level = "error"
 	}
+	bar := makeProgressBar(opts, p, "DV converting")
 	pipeline := &convert.DVPipeline{
 		FFmpegPath:      ffmpegPath,
 		DoviToolPath:    doviPath,
 		Plan:            p,
 		Logger:          stderrFor(opts),
 		ExtraGlobalArgs: []string{"-loglevel", level},
+		CaptureStderr:   bar != nil && !opts.verbose,
 	}
-	bar := makeProgressBar(opts, p, "DV converting")
 	if bar != nil {
 		pipeline.OnProgress = func(u progress.Update) {
 			_ = bar.Set64(u.OutTimeUs)
@@ -328,7 +329,27 @@ func execFFmpeg(ctx context.Context, opts *cliOpts, ffmpegPath string, args []st
 		args = append(args[:len(args)-1:len(args)-1], "-progress", "pipe:1", out)
 	}
 	cmd := exec.CommandContext(ctx, ffmpegPath, args...)
-	cmd.Stderr = stderrFor(opts)
+
+	// Buffer stderr when a progress bar is active so ffmpeg warnings (e.g. the
+	// benign "Multiple -codec ... will be used" lines) don't break the bar's
+	// in-place redraw. Dump the buffer if the run fails.
+	var stderrBuf bytes.Buffer
+	captureStderr := bar != nil && !opts.verbose
+	if captureStderr {
+		cmd.Stderr = &stderrBuf
+	} else {
+		cmd.Stderr = stderrFor(opts)
+	}
+
+	runErr := runWithBar(cmd, bar, opts)
+	if runErr != nil && captureStderr && stderrBuf.Len() > 0 {
+		fmt.Fprintln(os.Stderr, "--- ffmpeg stderr ---")
+		os.Stderr.Write(stderrBuf.Bytes())
+	}
+	return runErr
+}
+
+func runWithBar(cmd *exec.Cmd, bar *progressbar.ProgressBar, opts *cliOpts) error {
 	if bar == nil {
 		if opts.verbose {
 			cmd.Stdout = os.Stderr

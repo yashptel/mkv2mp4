@@ -1,6 +1,7 @@
 package convert
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -76,9 +77,15 @@ type DVPipeline struct {
 	FFmpegPath      string
 	DoviToolPath    string
 	Plan            *plan.ConversionPlan
-	Logger          io.Writer                    // status + stderr
+	Logger          io.Writer                    // status messages from the pipeline itself
 	OnProgress      func(update progress.Update) // optional; called during step 3 (mux)
 	ExtraGlobalArgs []string                     // prepended to each ffmpeg call (e.g. "-loglevel warning")
+
+	// CaptureStderr buffers ffmpeg/dovi_tool stderr during each step and only
+	// surfaces it (via the returned error) when a step fails. This keeps a
+	// progress bar's redraw clean. When false, stderr streams to Logger in
+	// real time (use this with --verbose).
+	CaptureStderr bool
 }
 
 // Run executes the pipeline.
@@ -125,14 +132,20 @@ func (d *DVPipeline) runFFmpeg(ctx context.Context, args []string, onProgress fu
 		args = append(args[:len(args)-1:len(args)-1], "-progress", "pipe:1", out)
 	}
 	cmd := exec.CommandContext(ctx, d.FFmpegPath, args...)
-	if d.Logger != nil {
+
+	var stderrBuf bytes.Buffer
+	if d.CaptureStderr {
+		cmd.Stderr = &stderrBuf
+	} else if d.Logger != nil {
 		cmd.Stderr = d.Logger
 	}
 	if onProgress == nil {
-		if d.Logger != nil {
+		if d.CaptureStderr {
+			cmd.Stdout = io.Discard
+		} else if d.Logger != nil {
 			cmd.Stdout = d.Logger
 		}
-		return cmd.Run()
+		return wrapWithStderr(cmd.Run(), &stderrBuf, d.CaptureStderr)
 	}
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
@@ -142,16 +155,29 @@ func (d *DVPipeline) runFFmpeg(ctx context.Context, args []string, onProgress fu
 		return err
 	}
 	_ = progress.Parse(stdout, onProgress)
-	return cmd.Wait()
+	return wrapWithStderr(cmd.Wait(), &stderrBuf, d.CaptureStderr)
 }
 
 func (d *DVPipeline) runDoviTool(ctx context.Context, args []string) error {
 	cmd := exec.CommandContext(ctx, d.DoviToolPath, args...)
-	if d.Logger != nil {
+	var stderrBuf bytes.Buffer
+	if d.CaptureStderr {
+		cmd.Stdout = io.Discard
+		cmd.Stderr = &stderrBuf
+	} else if d.Logger != nil {
 		cmd.Stdout = d.Logger
 		cmd.Stderr = d.Logger
 	}
-	return cmd.Run()
+	return wrapWithStderr(cmd.Run(), &stderrBuf, d.CaptureStderr)
+}
+
+// wrapWithStderr appends captured stderr to a non-nil error so the caller can
+// surface the diagnostic context without it polluting a clean run.
+func wrapWithStderr(err error, buf *bytes.Buffer, captured bool) error {
+	if err == nil || !captured || buf.Len() == 0 {
+		return err
+	}
+	return fmt.Errorf("%w\nstderr: %s", err, buf.String())
 }
 
 func (d *DVPipeline) logf(format string, args ...any) {
