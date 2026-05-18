@@ -13,10 +13,19 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
 )
+
+// binFile returns the filename on disk for a tool, mirroring cachedPath.
+func binFile(name string) string {
+	if runtime.GOOS == "windows" {
+		return name + ".exe"
+	}
+	return name
+}
 
 func TestMemberMatches(t *testing.T) {
 	cases := []struct {
@@ -108,9 +117,12 @@ func TestResolver_DownloadAndExtractZip(t *testing.T) {
 	if !bytes.Equal(got, binContent) {
 		t.Errorf("extracted content mismatch")
 	}
-	st, _ := os.Stat(dest)
-	if st.Mode().Perm()&0o100 == 0 {
-		t.Errorf("expected executable, got mode %v", st.Mode())
+	if runtime.GOOS != "windows" {
+		// Windows doesn't expose Unix exec bits; skip the perm check there.
+		st, _ := os.Stat(dest)
+		if st.Mode().Perm()&0o100 == 0 {
+			t.Errorf("expected executable, got mode %v", st.Mode())
+		}
 	}
 }
 
@@ -148,7 +160,7 @@ func TestResolver_DownloadAndExtractTarGz(t *testing.T) {
 
 func TestResolver_ResolveFromCache(t *testing.T) {
 	cache := t.TempDir()
-	binPath := filepath.Join(cache, "ffprobe")
+	binPath := filepath.Join(cache, binFile("ffprobe"))
 	if err := os.WriteFile(binPath, []byte("cached"), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -169,8 +181,7 @@ func TestResolver_ResolveFromCache(t *testing.T) {
 func TestResolver_ResolveFromPath(t *testing.T) {
 	// Put a fake ffmpeg on PATH and ensure Resolve returns it.
 	fakeDir := t.TempDir()
-	binName := "ffmpeg"
-	fakePath := filepath.Join(fakeDir, binName)
+	fakePath := filepath.Join(fakeDir, binFile("ffmpeg"))
 	if err := os.WriteFile(fakePath, []byte("#!/bin/sh\necho fake\n"), 0o755); err != nil {
 		t.Fatal(err)
 	}

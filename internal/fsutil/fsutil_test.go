@@ -129,8 +129,8 @@ func TestExpand_NoMatchingGlob(t *testing.T) {
 
 func TestOutputResolver_DefaultSameDir(t *testing.T) {
 	r := &OutputResolver{}
-	got := r.Output("/some/dir/movie.mkv")
-	want := "/some/dir/movie.mp4"
+	got := r.Output(filepath.FromSlash("/some/dir/movie.mkv"))
+	want := filepath.FromSlash("/some/dir/movie.mp4")
 	if got != want {
 		t.Errorf("Output: got %q, want %q", got, want)
 	}

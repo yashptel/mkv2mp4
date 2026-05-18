@@ -115,7 +115,11 @@ func (r *Resolver) download(ctx context.Context, url string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	resp, err := r.HTTPClient.Do(req)
+	client := r.HTTPClient
+	if client == nil {
+		client = http.DefaultClient
+	}
+	resp, err := client.Do(req)
 	if err != nil {
 		return "", err
 	}
