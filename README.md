@@ -2,12 +2,12 @@
 
 A cross-platform CLI that converts MKV files to LG-OLED-friendly MP4 so Dolby Vision plays from a USB stick or local network share.
 
-LG OLEDs only carry Dolby Vision in the MP4 container, and almost all torrent rips ship as MKV. This tool does what you actually need to make the file play correctly:
+LG OLEDs only carry Dolby Vision in the MP4 container, but most Dolby Vision content is distributed as MKV. This tool does what you actually need to make a file you legitimately own play correctly:
 
 - **Remux** video and compatible audio without re-encoding (lossless).
 - **Drop** PGS / DVD bitmap subtitles that MP4 can't carry.
 - **Transcode** TrueHD / DTS-HD MA / FLAC / DTS / Opus audio to EAC3 640k so the TV's decoder is happy (Atmos preserved via EAC3-JOC where the source supports it).
-- **Convert** Dolby Vision Profile 7 (the dual-layer flavour most BD-rips use) to Profile 8.1 (the single-layer flavour LG OLEDs accept in MP4).
+- **Convert** Dolby Vision Profile 7 (the dual-layer flavour common in 4K Blu-ray source material) to Profile 8.1 (the single-layer flavour LG OLEDs accept in MP4). Without this, Profile 7 files play in HDR10 with no DV badge.
 - **Auto-fetch** `ffmpeg`, `ffprobe`, and `dovi_tool` on first run if you don't already have them on `$PATH`. Zero manual setup.
 
 ## Install
